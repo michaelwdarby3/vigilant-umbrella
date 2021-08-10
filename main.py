@@ -29,7 +29,7 @@ def embed(input):
   return model(input)
 
 
-
+#This is where all the computation goes. It's not the fastest thing in the world, since a lot of work is being done.
 class Recommender(Resource):
     def __init__(self):
         self.users = {}
@@ -39,6 +39,7 @@ class Recommender(Resource):
         self.titles = []
         self.ids = []
         
+        #Handles all the processing for the article file.
         with open('data/articles.csv', 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
             line_count = 0
@@ -53,7 +54,8 @@ class Recommender(Resource):
                 self.ids.append(row[0])
                 
         self.embeddings = embed(self.titles)
-		
+	
+        #Handles all the processing for the user file.
         with open('data/article_user.csv', 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
             line_count = 0
@@ -81,13 +83,15 @@ class Recommender(Resource):
         
         self.headline_scores = {article_id: {} for article_id in self.article_ids}
         
-        for article_1 in self.article_ids:
-            for article_2 in self.article_ids:
-                if article_2 in self.headline_scores[article_1] and article_1 in self.headline_scores[article_2]:
-                    continue
-                score = (self.generate_relative_headline_scores(article_1, article_2) + 1) / 2
-                self.headline_scores[article_1][article_2] = score
-                self.headline_scores[article_2][article_1] = score
+        #This generates the scores themselves for any pair of articles. Frontloading it is an option if you have good reason for it; 
+        #it likely isn't a good idea though. Commented out for a reason.
+        #for article_1 in self.article_ids:
+        #    for article_2 in self.article_ids:
+        #        if article_2 in self.headline_scores[article_1] and article_1 in self.headline_scores[article_2]:
+        #            continue
+        #        score = (self.generate_relative_headline_scores(article_1, article_2) + 1) / 2
+        #        self.headline_scores[article_1][article_2] = score
+        #        self.headline_scores[article_2][article_1] = score
                 
         
                 
@@ -95,7 +99,7 @@ class Recommender(Resource):
     
     
     
-    
+    #Gets the inner product of two article headlines to determine how related they are.
     def generate_relative_headline_scores(self, article_1, article_2):
         
         index1 = self.ids.index(article_1)
@@ -107,6 +111,7 @@ class Recommender(Resource):
         
         return score
     
+    #Determines how recent any two articles are 
     def get_recentness_score(self, article_id):
         t = time.time()
         pub_date = self.article_data[article_id][2]
@@ -114,11 +119,13 @@ class Recommender(Resource):
         normalized_recency = (1 / math.log(tdelta))
         return normalized_recency
     
+    #Determines how popular an article is.
     def calculate_popularity_score(self, article_id):
         reader_count = len(self.readership[article_id])
         eased_popularity = 1 - (1/(2 + reader_count))
         return eased_popularity
     
+    #Does overall score calculations for any given article and user.
     def calculate_score(self, user_id, article_id):
         if user_id in self.readership[article_id]:
             read_already = .5
@@ -137,9 +144,9 @@ class Recommender(Resource):
 recommender = Recommender()
 
 
-    
+#Actually handles http call.
 @app.route('/recommendations', methods=['GET'])
-def get(recommender):
+def get():
     try:
         user_id = request.args.get('user_id')
     except:
