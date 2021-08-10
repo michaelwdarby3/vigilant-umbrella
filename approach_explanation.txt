@@ -1,0 +1,26 @@
+Hello! To generate recommendations, I figured that the easiest and most extensible approach would be to use a scoring mechanism of some sort. I wanted to make this as simple as possible, so I took a few factors into account:
+
+1. Whether a user had read this article
+2. Whether the article seemed relevant to a user given what they'd read so far.
+3. Whether an article was read by many people
+4. How recent an article was.
+
+The values for these components are each just multiplied together, which is obviously far from optimal (as one component may dominate the others) but I didn't want to overthink it.  I generate these scores as follows:
+
+1. I just check if a user has read an article. If they have, the value is .5, otherwise it's 1. Just make read articles much less likely to show.
+
+2. I used a premade tensorflow model, pulled directly from the TF set of repositories at https://tfhub.dev/google/universal-sentence-encoder/4. There are innumerable ways to compare two pieces of text (there's a reason NLP is such an expansive field!), but I decided that generating sentence embeddings across the whole dataset would allow for semantic comparison, and prove extensible for future inputs as new headlines are generated, since you could just generate the embeddings for those new headlines and make the comparisons as needed. Luckily, comparing two sentences with the embeddings generated is very easy, as you can simply get the inner product of their embeddings to get a score for how simlar or different they are. I just normalized the scores this inner product generates, and used it as part of my overall score. I felt comfortable using a pretrained model for several reasons. Partially, it would take too much time to train and test a model I write myself, and partially because sentence embedding has been done to death and it seemed overkill to reinvent the wheel developing a model when a perfectly serviceable one exists in public domain.  
+
+3. I took the reader count and did some lazy normalizing work. Not much thought was put into this, as this portion seemed like a potential timesink with little reward.
+
+4. I took the publication date, compared it to the current timestamp, and did some normalizing work to prioritize recent articles. I might have considered some approaches using comparisons to the user's preferred article set if I had more time, or used a less terrible normalization method.
+
+All of the computations are done on initialization, which takes a little while because the model needs to be downloaded and quite a lot of computations on the article data needs to be done.  I figured that it would be best to front-load computation so that users don't have to wait for recommendations, and because that better matches the ordinary use case when running a website. You'll notice the vast majority of the work done is done during __init__.
+
+I figured it would be best to go a bit overboard on generating data structures rather than underdoing it; it's far from memory optimal, but having all these data structures with the pre-computed values would lessen compute time immensely.  One thing I considered was also front-loading the recommendations themselves by computing them ahead of time, but that felt like cheating, and the couple seconds it takes to generate these recommendations doesn't seem too large a cost overall.
+
+I used flask for the API, since it's a lightweight Python framework that would let this work incredibly easily.  No need for django or anything quite so heavyweight.
+
+I considered trying to develop a person -> article taste mapping, as that's critical for a good recommendation system.  I believe it would be possible if you leveraged the semantic embeddings I already use, to be honest, if you generated a graph of topic relations, or generated a multidimensional space representing article topics.
+
+I decided against using the current article being viewed more influentially than the rest of the articles, but it would be easy to modify this to use the current article more strongly.
