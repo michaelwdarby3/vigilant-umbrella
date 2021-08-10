@@ -15,7 +15,7 @@ The values for these components are each just multiplied together, which is obvi
 
 4. I took the publication date, compared it to the current timestamp, and did some normalizing work to prioritize recent articles. I might have considered some approaches using comparisons to the user's preferred article set if I had more time, or used a less terrible normalization method.
 
-All of the computations are done on initialization, which takes a little while because the model needs to be downloaded and quite a lot of computations on the article data needs to be done.  I figured that it would be best to front-load computation so that users don't have to wait for recommendations, and because that better matches the ordinary use case when running a website. You'll notice the vast majority of the work done is done during __init__.
+All of the data prep work is done on initialization, but the actual inference calls that use the tensorflow model wait until the requests are made. In a real-life use case, I would try to frontload that work, and do as much of it on initialization as possible, but in this case it took far too long so I commented that out and decided to let it happen on the fly.
 
 I figured it would be best to go a bit overboard on generating data structures rather than underdoing it; it's far from memory optimal, but having all these data structures with the pre-computed values would lessen compute time immensely.  One thing I considered was also front-loading the recommendations themselves by computing them ahead of time, but that felt like cheating, and the couple seconds it takes to generate these recommendations doesn't seem too large a cost overall.
 
